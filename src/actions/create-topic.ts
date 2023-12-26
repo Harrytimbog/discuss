@@ -1,6 +1,11 @@
 "use server";
+import type { Topic } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { db } from "@/db";
+import paths from "@/paths";
 
 const createTopicSchema = z.object({
   name: z
@@ -47,9 +52,31 @@ export async function createTopic(
     };
   }
 
-  return {
-    errors: {},
-  };
+  let topic: Topic;
+  try {
+    topic = await db.topic.create({
+      data: {
+        slug: result.data.name,
+        description: result.data.description,
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return {
+        errors: {
+          _form: [error.message],
+        },
+      };
+    } else {
+      return {
+        errors: {
+          _form: ["Something went wrong"],
+        },
+      };
+    }
+  }
 
-  // TODO: Revalidate the homepage
+  // TODO: Revalidate the homepage # Do this before redirect bcos nothing else will run after redirect. (),Remember redirect throws an error in nextjs also
+  revalidatePath("/");
+  redirect(paths.topicShow(topic.slug));
 }
