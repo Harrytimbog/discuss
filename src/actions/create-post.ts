@@ -37,6 +37,8 @@ export async function createPost(
     };
   }
 
+  // Check that only authenticated user can create Post successfully
+
   const session = await auth();
 
   if (!session || !session.user) {
@@ -46,6 +48,8 @@ export async function createPost(
       },
     };
   }
+
+  // Find Topic I want to create a post in
 
   const topic = await db.topic.findFirst({
     where: { slug },
@@ -59,8 +63,37 @@ export async function createPost(
     };
   }
 
-  return {
-    errors: {},
-  };
+  let post: Post;
+
+  try {
+    post = await db.post.create({
+      data: {
+        title: result.data.title,
+        content: result.data.content,
+        userId: session.user.id,
+        topicId: topic.id,
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return {
+        errors: {
+          _form: [error.message],
+        },
+      };
+    } else {
+      return {
+        errors: {
+          _form: ["Failed to create post"],
+        },
+      };
+    }
+  }
+
+  // return {
+  //   errors: {},
+  // };
   // TODO: Revalidate the topic show page
+  revalidatePath(paths.topicShow(slug));
+  redirect(paths.postShow(slug, post.id));
 }
