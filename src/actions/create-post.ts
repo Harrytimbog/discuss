@@ -26,18 +26,28 @@ export async function createPost(
   formData: FormData
 ): Promise<CreatePostFormState> {
   const result = createPostSchema.safeParse({
-    title: formData.get('title'),
-    content: formData.get('content')
-  })
+    title: formData.get("title"),
+    content: formData.get("content"),
+  });
 
   if (!result.success) {
     return {
-      errors: result.error.flatten().fieldErrors
-    }
+      errors: result.error.flatten().fieldErrors,
+    };
+  }
+
+  const session = await auth();
+
+  if (!session || !session.user) {
+    return {
+      errors: {
+        _form: ["You must be signed in to do this"],
+      },
+    };
   }
 
   return {
-    errors: {}
-  }
+    errors: {},
+  };
   // TODO: Revalidate the topic show page
 }
